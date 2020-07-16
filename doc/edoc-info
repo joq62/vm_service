@@ -1,0 +1,2 @@
+%% encoding: UTF-8
+{modules,[boot_service,boot_service_app,boot_service_sup,lib_boot_service]}.
