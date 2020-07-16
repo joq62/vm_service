@@ -36,7 +36,8 @@
 %% External functions
 %% ====================================================================
 
--export([get_instance/1]).
+-export([get_instance/1,
+	update_service_list/1]).
 
 -export([]).
 %% server interface
@@ -89,11 +90,12 @@ start_service(ServiceId,Type,Source)->
 stop_service(ServiceId)->    
     gen_server:call(?MODULE,{stop_service,ServiceId},infinity).
 
+%%___________________________________________________________________
 heart_beat(Interval)->
     gen_server:cast(?MODULE, {heart_beat,Interval}).
 
-%%___________________________________________________________________
-
+update_service_list(ServiceList)->
+    gen_server:cast(?MODULE, {update_service_list,ServiceList}).
 
 %%-----------------------------------------------------------------------
 
@@ -173,6 +175,10 @@ handle_cast({heart_beat,Interval}, State) ->
     spawn(fun()->h_beat(Interval) end),    
     {noreply, State};
 
+handle_cast({update_service_list,ServiceList}, State) ->
+    NewState=State#state{service_list=ServiceList},
+    {noreply, NewState};
+
 handle_cast(Msg, State) ->
     io:format("unmatched match cast ~p~n",[{?MODULE,?LINE,Msg}]),
     {noreply, State}.
@@ -216,7 +222,7 @@ code_change(_OldVsn, State, _Extra) ->
 h_beat(Interval)->
     dns:update_info(?CATALOG_CONFIG_URL,?CATALOG_CONFIG_DIR,?CATALOG_CONFIG_FILE),
     ServiceList=dns:update(),
-    dns_service:update(ServiceList),
+    vm_service:update_service_list(ServiceList),
     timer:sleep(Interval),
     rpc:cast(node(),?MODULE,heart_beat,[Interval]).
 
