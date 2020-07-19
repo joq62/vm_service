@@ -1,6 +1,6 @@
 %%% -------------------------------------------------------------------
 %%% @author  : Joq Erlang
-%%% @doc : represent a logical vm 
+%%% @doc : represent a logical vm  
 %%% 
 %%% Supports the system with standard erlang vm functionality, load and start
 %%% of an erlang application (downloaded from git hub) and "dns" support 
