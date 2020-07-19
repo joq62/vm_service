@@ -4,7 +4,7 @@
 %%% 
 %%% Create1d : 10 dec 2012
 %%% -------------------------------------------------------------------
--module(boot_service_tests). 
+-module(vm_service_tests). 
    
 %% --------------------------------------------------------------------
 %% Include files
@@ -40,7 +40,7 @@
 %% Returns: non
 %% --------------------------------------------------------------------
 start()->
-    spawn(fun()->eunit:test({timeout,1*60,boot_service}) end).
+    spawn(fun()->eunit:test({timeout,1*60,vm_service}) end).
 
 cases_test()->
     ?debugMsg("Test system setup"),
@@ -65,7 +65,7 @@ cases_test()->
 %% Returns: non
 %% --------------------------------------------------------------------
 setup()->
-    boot_service:boot(),
+    vm_service:boot(),
     ok.
 cleanup()->
     init:stop(),

@@ -21,6 +21,7 @@
 %% ====================================================================
 %% External functions
 %% ====================================================================
+
 start(ServiceId,git,GitUrl)->
     Result=case [ServiceId||{Application,_,_}<-application:loaded_applications(),
 			    list_to_atom(ServiceId)==Application] of

@@ -42,6 +42,7 @@
 -export([]).
 %% server interface
 -export([boot/0,
+	 start_service/1,
 	 start_service/3,
 	 stop_service/1 
 	]).
@@ -85,6 +86,9 @@ ping()->
 
 get_instance(ServiceId)->
     gen_server:call(?MODULE,{get_instance,ServiceId},infinity).
+
+start_service(ServiceId)->    
+    gen_server:call(?MODULE,{start_service,ServiceId},infinity).
 start_service(ServiceId,Type,Source)->    
     gen_server:call(?MODULE,{start_service,ServiceId,Type,Source},infinity).
 stop_service(ServiceId)->    
@@ -137,8 +141,22 @@ init([]) ->
 %%          {stop, Reason, Reply, State}   | (terminate/2 is called)
 %%          {stop, Reason, State}            (aterminate/2 is called)
 %% --------------------------------------------------------------------
+handle_call({start_service,ServiceId}, _From, State) ->
+    Reply=case file:consult(filename:join(?CATALOG_CONFIG_DIR,?CATALOG_CONFIG_FILE)) of
+	      {ok,Info}->
+		  case lists:keyfind(ServiceId,1,Info) of
+		      {ServiceId,Type,Source}->
+			  rpc:call(node(),loader,start,[ServiceId,Type,Source],5000);
+		      []->
+			  {error,[eexists, ServiceId,?MODULE,?LINE]}
+		  end;
+	      Err->
+		  {error,[Err,?MODULE,?LINE]}
+	  end,
+    {reply, Reply, State};
+
 handle_call({start_service,ServiceId,Type,Source}, _From, State) ->
-    Reply=loader:start(ServiceId,Type,Source),
+    Reply=rpc:call(node(),loader,start,[ServiceId,Type,Source],5000),
     {reply, Reply, State};
 handle_call({stop_service,ServiceId}, _From, State) ->
     Reply=loader:stop(ServiceId),

@@ -1,0 +1,5 @@
+1) vm modes passive or active
+passive == initial start or restart or passive signal from xx
+      no applications are loaded nor a config files
+active 
+	activated by XX and config files are loaded 
