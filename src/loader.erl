@@ -13,7 +13,7 @@
 %% --------------------------------------------------------------------
 
 %% External exports
--export([start/3,stop/1
+-export([start/1,stop/1
 	]).
 	 
 
@@ -22,18 +22,24 @@
 %% External functions
 %% ====================================================================
 
-start(ServiceId,git,GitUrl)->
-    Result=case [ServiceId||{Application,_,_}<-application:loaded_applications(),
-			    list_to_atom(ServiceId)==Application] of
+start(ServiceId)->
+    CatalogInfo=rpc:call(node(),config_service,get_info,[catalog_info]),
+    Result=case lists:keyfind(ServiceId,1,CatalogInfo) of
+	       {ServiceId,Type,Source}->
+		   case [ServiceId||{Application,_,_}<-application:loaded_applications(),
+				    list_to_atom(ServiceId)==Application] of
+		       []->
+			   EbinDir=filename:join(ServiceId,"ebin"),
+			   stop(ServiceId),
+			   os:cmd("git clone "++Source++ServiceId++".git"),
+			   true=code:add_path(EbinDir),
+			   ok=application:start(list_to_atom(ServiceId)),
+			   {ok,ServiceId};
+		       Err ->
+			   {error,Err}
+		   end;
 	       []->
-		   EbinDir=filename:join(ServiceId,"ebin"),
-		   stop(ServiceId),
-		   os:cmd("git clone "++GitUrl++ServiceId++".git"),
-		   true=code:add_path(EbinDir),
-		   ok=application:start(list_to_atom(ServiceId)),
-		   {ok,ServiceId};
-	       Err ->
-		   {error,Err}
+		   {error,[eexists, ServiceId,?MODULE,?LINE]}
 	   end,
     Result.
  

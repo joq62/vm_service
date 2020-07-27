@@ -18,15 +18,15 @@
 %% Include files
 %% --------------------------------------------------------------------
 -include("log.hrl").
--include("timeout.hrl").
--include("config.hrl").
+%-include("timeout.hrl").
+%-include("config.hrl").
 %% --------------------------------------------------------------------
 
 %% --------------------------------------------------------------------
 %% Key Data structures
 %% 
 %% --------------------------------------------------------------------
--record(state,{service_list}).
+-record(state,{}).
 
 
 	  
@@ -36,8 +36,9 @@
 %% External functions
 %% ====================================================================
 
--export([get_instance/1,
-	update_service_list/1]).
+-export([push_info/2,get_info/1,
+	 get_instance/1,
+	 update_service_list/1]).
 
 -export([]).
 %% server interface
@@ -81,6 +82,9 @@ stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
 %%----------------------------------------------------------------------
+get_info(Type)->
+    gen_server:call(?MODULE,{get_info,Info},infinity).
+
 ping()->
     gen_server:call(?MODULE,{ping},infinity).
 
@@ -89,8 +93,6 @@ get_instance(ServiceId)->
 
 start_service(ServiceId)->    
     gen_server:call(?MODULE,{start_service,ServiceId},infinity).
-start_service(ServiceId,Type,Source)->    
-    gen_server:call(?MODULE,{start_service,ServiceId,Type,Source},infinity).
 stop_service(ServiceId)->    
     gen_server:call(?MODULE,{stop_service,ServiceId},infinity).
 
@@ -101,6 +103,8 @@ heart_beat(Interval)->
 update_service_list(ServiceList)->
     gen_server:cast(?MODULE, {update_service_list,ServiceList}).
 
+push_info(Type,Info)->
+    gen_server:cast(?MODULE,{push_info,Type,Info}).
 %%-----------------------------------------------------------------------
 
 
@@ -118,17 +122,13 @@ update_service_list(ServiceList)->
 %
 %% --------------------------------------------------------------------
 init([]) ->
-    case application:get_all_env() of
-	[]->
-	    ok;
-	Env->
-	    {services,ServicesAtom}=lists:keyfind(services,1,Env),
-	    ServiceIdList=string:tokens(atom_to_list(ServicesAtom),"X"),
-	    [application:start(list_to_atom(ServiceId))||ServiceId<-ServiceIdList],
-	    sys:log(log_service,{true,?LOG_BUFFER})
-    end,
+    
+    {ok,HbInterval}= application:get_env(hb_interval),
+    {ok,AppsToStart}=application:get_env(apps_to_start),
+    [application:start(App)||App<-AppsToStart],
+    sys:log(log_service,{true,?LOG_BUFFER}),
     ?LOG_INFO(event,{?MODULE,'started'}),
-    spawn(fun()->heart_beat(?VM_HEARTBEAT) end),
+    spawn(fun()->heart_beat(HbInterval) end),
     {ok, #state{}}.
     
 %% --------------------------------------------------------------------
@@ -142,22 +142,9 @@ init([]) ->
 %%          {stop, Reason, State}            (aterminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({start_service,ServiceId}, _From, State) ->
-    Reply=case file:consult(filename:join(?CATALOG_CONFIG_DIR,?CATALOG_CONFIG_FILE)) of
-	      {ok,Info}->
-		  case lists:keyfind(ServiceId,1,Info) of
-		      {ServiceId,Type,Source}->
-			  rpc:call(node(),loader,start,[ServiceId,Type,Source],5000);
-		      []->
-			  {error,[eexists, ServiceId,?MODULE,?LINE]}
-		  end;
-	      Err->
-		  {error,[Err,?MODULE,?LINE]}
-	  end,
+    Reply=rpc:call(node(),loader,start_service,[ServiceId]),
     {reply, Reply, State};
 
-handle_call({start_service,ServiceId,Type,Source}, _From, State) ->
-    Reply=rpc:call(node(),loader,start,[ServiceId,Type,Source],5000),
-    {reply, Reply, State};
 handle_call({stop_service,ServiceId}, _From, State) ->
     Reply=loader:stop(ServiceId),
     {reply, Reply, State};
@@ -166,10 +153,19 @@ handle_call({get_instance,all}, _From, State) ->
     Reply=State#state.service_list,
     {reply, Reply, State};
 
-handle_call({get_instance,ServiceId}, _From, State) ->
-     Reply=dns:get(ServiceId,State#state.service_list),
+handle_call({get_instance,WantedServiceId}, _From, State) ->
+    Reply=rpc:call(node(),dns,get[ServiceId,State#state.service_list]),
     {reply, Reply, State};
 
+handle_call({get_info,app_info}, _From, State) ->
+     Reply=State#state.app_info,
+    {reply, Reply, State};
+handle_call({get_info,catalog_info}, _From, State) ->
+     Reply=State#state.catalog_info,
+    {reply, Reply, State};
+handle_call({get_info,node_info}, _From, State) ->
+     Reply=State#state.node_info,
+    {reply, Reply, State};
 
 handle_call({ping}, _From, State) ->
     Reply={pong,node(),?MODULE},
@@ -189,8 +185,19 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast({heart_beat,Interval}, State) ->
-    spawn(fun()->h_beat(Interval) end),    
+handle_cast({push_info,add_info,Info}, State) ->
+    NewState=State#state{add_info=Info},
+    {noreply, NewState};
+handle_cast({push_info,catalog_info,Info}, State) ->
+    NewState=State#state{catalog_info=Info},
+    {noreply, NewState};
+handle_cast({push_info,node_info,Info}, State) ->
+    NewState=State#state{node_info=Info},
+    {noreply, NewState};
+
+
+handle_cast({heart_beat,HbInterval,ConfigUrl,CatalogDir,CatalogFile}, State) ->
+    spawn(fun()->h_beat(HbInterval,ConfigUrl,CatalogDir,CatalogFile) end),    
     {noreply, State};
 
 handle_cast({update_service_list,ServiceList}, State) ->
@@ -237,12 +244,10 @@ code_change(_OldVsn, State, _Extra) ->
 %% Description:
 %% Returns: non
 %% --------------------------------------------------------------------
-h_beat(Interval)->
-    dns:update_info(?CATALOG_CONFIG_URL,?CATALOG_CONFIG_DIR,?CATALOG_CONFIG_FILE),
-    ServiceList=dns:update(),
-    vm_service:update_service_list(ServiceList),
-    timer:sleep(Interval),
-    rpc:cast(node(),?MODULE,heart_beat,[Interval]).
+h_beat(HbInterval)->
+    ok=rpc:call(node(),sd_service,trade_services,[]),
+    timer:sleep(HbInterval),
+    rpc:cast(node(),?MODULE,heart_beat,[HbInterval]).
 
 
 %% --------------------------------------------------------------------

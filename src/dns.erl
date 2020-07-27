@@ -40,8 +40,8 @@ all(DnsInfo)->
 
 %% @doc: get(ServiceId) returns of a list of nodes that have ServiceId all running applications
 -spec(get(ServiceId::string(),DnsInfo::[{ServiceId::string(),Node::atom()}])->[{ServiceId::string(),Node::atom()}]|[]).
-get(WantedServiceId,DnsInfo)->
-    ActiveServices=[{ServiceId,Node}||{ServiceId,Node}<-DnsInfo,
+get(WantedServiceId,ServiceList)->
+    ActiveServices=[Node||{ServiceId,Node}<-ServiceList,
 				      WantedServiceId==ServiceId],
     ActiveServices.
 
