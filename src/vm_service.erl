@@ -36,15 +36,12 @@
 %% External functions
 %% ====================================================================
 
--export([push_info/2,get_info/1,
-	 get_instance/1,
-	 update_service_list/1]).
+-export([]).
 
 -export([]).
 %% server interface
 -export([boot/0,
 	 start_service/1,
-	 start_service/3,
 	 stop_service/1 
 	]).
 
@@ -82,14 +79,10 @@ stop()-> gen_server:call(?MODULE, {stop},infinity).
 
 
 %%----------------------------------------------------------------------
-get_info(Type)->
-    gen_server:call(?MODULE,{get_info,Info},infinity).
+
 
 ping()->
     gen_server:call(?MODULE,{ping},infinity).
-
-get_instance(ServiceId)->
-    gen_server:call(?MODULE,{get_instance,ServiceId},infinity).
 
 start_service(ServiceId)->    
     gen_server:call(?MODULE,{start_service,ServiceId},infinity).
@@ -100,11 +93,7 @@ stop_service(ServiceId)->
 heart_beat(Interval)->
     gen_server:cast(?MODULE, {heart_beat,Interval}).
 
-update_service_list(ServiceList)->
-    gen_server:cast(?MODULE, {update_service_list,ServiceList}).
 
-push_info(Type,Info)->
-    gen_server:cast(?MODULE,{push_info,Type,Info}).
 %%-----------------------------------------------------------------------
 
 
@@ -149,24 +138,6 @@ handle_call({stop_service,ServiceId}, _From, State) ->
     Reply=loader:stop(ServiceId),
     {reply, Reply, State};
 
-handle_call({get_instance,all}, _From, State) ->
-    Reply=State#state.service_list,
-    {reply, Reply, State};
-
-handle_call({get_instance,WantedServiceId}, _From, State) ->
-    Reply=rpc:call(node(),dns,get[ServiceId,State#state.service_list]),
-    {reply, Reply, State};
-
-handle_call({get_info,app_info}, _From, State) ->
-     Reply=State#state.app_info,
-    {reply, Reply, State};
-handle_call({get_info,catalog_info}, _From, State) ->
-     Reply=State#state.catalog_info,
-    {reply, Reply, State};
-handle_call({get_info,node_info}, _From, State) ->
-     Reply=State#state.node_info,
-    {reply, Reply, State};
-
 handle_call({ping}, _From, State) ->
     Reply={pong,node(),?MODULE},
     {reply, Reply, State};
@@ -185,24 +156,10 @@ handle_call(Request, From, State) ->
 %%          {noreply, State, Timeout} |
 %%          {stop, Reason, State}            (terminate/2 is called)
 %% --------------------------------------------------------------------
-handle_cast({push_info,add_info,Info}, State) ->
-    NewState=State#state{add_info=Info},
-    {noreply, NewState};
-handle_cast({push_info,catalog_info,Info}, State) ->
-    NewState=State#state{catalog_info=Info},
-    {noreply, NewState};
-handle_cast({push_info,node_info,Info}, State) ->
-    NewState=State#state{node_info=Info},
-    {noreply, NewState};
 
-
-handle_cast({heart_beat,HbInterval,ConfigUrl,CatalogDir,CatalogFile}, State) ->
-    spawn(fun()->h_beat(HbInterval,ConfigUrl,CatalogDir,CatalogFile) end),    
+handle_cast({heart_beat,HbInterval}, State) ->
+    spawn(fun()->h_beat(HbInterval) end),    
     {noreply, State};
-
-handle_cast({update_service_list,ServiceList}, State) ->
-    NewState=State#state{service_list=ServiceList},
-    {noreply, NewState};
 
 handle_cast(Msg, State) ->
     io:format("unmatched match cast ~p~n",[{?MODULE,?LINE,Msg}]),
