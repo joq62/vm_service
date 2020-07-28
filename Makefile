@@ -1,9 +1,19 @@
 all:
+	rm -rf *.info configs  logfiles *_service include *~ */*~ */*/*~;
+	rm -rf */*.beam;
+	rm -rf *.beam erl_crash.dump */erl_crash.dump */*/erl_crash.dump;
+#	include
+	git clone https://github.com/joq62/include.git;
+	cp src/*.app ebin;
+	erlc -I include -o ebin src/*.erl;
+doc_gen:
+	rm -rf  node_config logfiles doc/*;
+	erlc ../doc_gen.erl;
+	erl -s doc_gen start -sname doc
+test:
 	rm -rf include configs *_service  erl_crasch.dump;
 #	include
 	git clone https://github.com/joq62/include.git;
-#	configs
-	git clone https://github.com/joq62/configs.git;
 #	config_service
 	git clone https://github.com/joq62/config_service.git;	
 	cp config_service/src/*.app config_service/ebin;
@@ -22,4 +32,4 @@ all:
 	erlc -I include -o ebin src/*.erl;
 #	test
 	erlc -I include -o test_ebin test_src/*.erl;
-	erl -pa */ebin -pa test_ebin -config test.config -s vm_service_tests start -sname vm_test
+	erl -pa ebin -pa */ebin -pa test_ebin -config test.config -s vm_service_tests start -sname vm_test

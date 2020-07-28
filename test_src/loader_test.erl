@@ -46,19 +46,19 @@ start()->
 
 one_service()->
     ServiceId="adder_service",
-    ?assertEqual({ok,ServiceId},loader:start(ServiceId,git,?GIT_URL)),
+    ?assertEqual({ok,ServiceId},vm_service:start_service(ServiceId)),
     ?assertEqual(42,adder:add(20,22)),
     ok.
 
 second_service()->
     ServiceId="multi_service",
-    ?assertEqual({ok,ServiceId},loader:start(ServiceId,git,?GIT_URL)),
+    ?assertEqual({ok,ServiceId},vm_service:start_service(ServiceId)),
     ?assertEqual(420,multi:multi(42,10)),
     ok.
 
 try_start_first_again()->
     ServiceId="adder_service",
-    ?assertEqual({error,["adder_service"]},loader:start(ServiceId,git,?GIT_URL)),
+    ?assertEqual({error,["adder_service"]},vm_service:start_service(ServiceId)),
     ?assertEqual(42,adder_service:add(20,22)),
     ok.	 
 
@@ -72,5 +72,5 @@ stop_services()->
     ok.
     
 start_non_existing()->
-    ?assertMatch({badrpc,_},rpc:call(node(),loader,start,["glurk",git,?GIT_URL])),
+    ?assertMatch({badrpc,_},rpc:call(node(),vm_service,start_service,[glurk])),
     ok.

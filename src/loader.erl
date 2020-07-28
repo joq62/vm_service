@@ -24,6 +24,7 @@
 
 start(ServiceId)->
     CatalogInfo=rpc:call(node(),config_service,get_info,[catalog_info]),
+
     Result=case lists:keyfind(ServiceId,1,CatalogInfo) of
 	       {ServiceId,Type,Source}->
 		   case [ServiceId||{Application,_,_}<-application:loaded_applications(),
@@ -42,7 +43,7 @@ start(ServiceId)->
 		   {error,[eexists, ServiceId,?MODULE,?LINE]}
 	   end,
     Result.
- 
+
 stop(ServiceId)->
     EbinDir=filename:join(ServiceId,"ebin"),
     application:stop(list_to_atom(ServiceId)),

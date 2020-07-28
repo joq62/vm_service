@@ -11,13 +11,6 @@
 %% --------------------------------------------------------------------
 -include_lib("eunit/include/eunit.hrl").
 
--ifdef(worker).
--define(LOADED_SERVICES,[{"kernel",worker_boot_test@asus},
-			 {"stdlib",worker_boot_test@asus}]).
--else.
--define(LOADED_SERVICES,[]).
--endif.
-
 
 
 
@@ -46,9 +39,6 @@ cases_test()->
     ?debugMsg("Test system setup"),
     setup(),
     %% Start application tests
-    ?debugMsg("check_loaded_services test"),    
-    ?assertEqual(ok,loaded_services()),
-
 
     ?debugMsg("test loader"),    
     ?assertEqual(ok,loader_test:start()),
@@ -65,15 +55,12 @@ cases_test()->
 %% Returns: non
 %% --------------------------------------------------------------------
 setup()->
-    vm_service:boot(),
+    ?assertEqual(ok,application:start(vm_service)),
+    ?assertMatch({pong,_,_},log_service:ping()),    
+    ?assertMatch({pong,_,_},config_service:ping()),  
+    ?assertMatch({pong,_,_},sd_service:ping()),  
+    timer:sleep(500),
     ok.
 cleanup()->
     init:stop(),
     ok.
-
-loaded_services()->
-    ?assertMatch(?LOADED_SERVICES
-		,dns_service:all()),  
-
-    ok.
-

@@ -131,7 +131,7 @@ init([]) ->
 %%          {stop, Reason, State}            (aterminate/2 is called)
 %% --------------------------------------------------------------------
 handle_call({start_service,ServiceId}, _From, State) ->
-    Reply=rpc:call(node(),loader,start_service,[ServiceId]),
+    Reply=rpc:call(node(),loader,start,[ServiceId]),
     {reply, Reply, State};
 
 handle_call({stop_service,ServiceId}, _From, State) ->
