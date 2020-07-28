@@ -114,7 +114,9 @@ init([]) ->
     
     {ok,HbInterval}= application:get_env(hb_interval),
     {ok,AppsToStart}=application:get_env(apps_to_start),
-    [application:start(App)||App<-AppsToStart],
+    StartResult=[{application:start(App),atom_to_list(App)}||App<-AppsToStart],
+    [rpc:call(node(),sd_service,add_service,[ServiceId])||{ok,ServiceId}<-StartResult],
+    
     sys:log(log_service,{true,?LOG_BUFFER}),
     ?LOG_INFO(event,{?MODULE,'started'}),
     spawn(fun()->heart_beat(HbInterval) end),

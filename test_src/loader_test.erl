@@ -12,14 +12,13 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %% --------------------------------------------------------------------
--define(GIT_URL,"https://github.com/joqerlang/").
--export([start/0,start_app/1]).
+
+-export([start/0]).
 
 %% ====================================================================
 %% External functions
 %% ====================================================================
-start_app(ServiceId)->
-    loader:start(ServiceId,git,?GIT_URL).
+
 
 % --------------------------------------------------------------------
 %% Function:start/0 
@@ -27,6 +26,10 @@ start_app(ServiceId)->
 %% Returns: non
 %% --------------------------------------------------------------------
 start()->
+    ?debugMsg("start check intial sd_service"),
+    ?assertEqual(ok,initial_sd_service()),
+
+
     ?debugMsg("start one service"),
     ?assertEqual(ok,one_service()),
 
@@ -44,30 +47,46 @@ start()->
 
     ok.
 
+
+initial_sd_service()->
+    ?assertEqual([{"config_service",vm_test@asus},
+		  {"log_service",vm_test@asus},
+		  {"sd_service",vm_test@asus}],sd_service:fetch_all(all)),
+    
+    ok.
+
 one_service()->
+    
     ServiceId="adder_service",
     ?assertEqual({ok,ServiceId},vm_service:start_service(ServiceId)),
     ?assertEqual(42,adder:add(20,22)),
+    ?assertEqual([vm_test@asus],sd_service:fetch_service(ServiceId)),
+    
     ok.
 
 second_service()->
     ServiceId="multi_service",
     ?assertEqual({ok,ServiceId},vm_service:start_service(ServiceId)),
     ?assertEqual(420,multi:multi(42,10)),
+    ?assertEqual([vm_test@asus],sd_service:fetch_service(ServiceId)),
     ok.
 
 try_start_first_again()->
     ServiceId="adder_service",
     ?assertEqual({error,["adder_service"]},vm_service:start_service(ServiceId)),
     ?assertEqual(42,adder_service:add(20,22)),
+    ?assertEqual([vm_test@asus],sd_service:fetch_service(ServiceId)),
     ok.	 
 
 stop_services()->
     ServiceId="adder_service",
-    ?assertEqual(ok,loader:stop(ServiceId)),
+    ?assertEqual(ok,vm_service:stop_service(ServiceId)),
+    ?assertEqual([],sd_service:fetch_service(ServiceId)),
     ?assertMatch({badrpc,_},rpc:call(node(),adder_service,add,[20,22])),
+
     ?assertEqual(420,multi_service:multi(42,10)),
-    ?assertEqual(ok,loader:stop("multi_service")),
+    ?assertEqual(ok,vm_service:stop_service("multi_service")),
+    ?assertEqual([],sd_service:fetch_service("multi_service")),
     ?assertMatch({badrpc,_},rpc:call(node(),multi_service,multi,[20,22])),
     ok.
     

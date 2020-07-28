@@ -35,6 +35,7 @@ start(ServiceId)->
 			   os:cmd("git clone "++Source++ServiceId++".git"),
 			   true=code:add_path(EbinDir),
 			   ok=application:start(list_to_atom(ServiceId)),
+			   sd_service:add_service(ServiceId),
 			   {ok,ServiceId};
 		       Err ->
 			   {error,Err}
@@ -50,4 +51,5 @@ stop(ServiceId)->
     application:unload(list_to_atom(ServiceId)),
     code:del_path(EbinDir),      
     os:cmd("rm -rf "++ServiceId),
-    ok.    
+    sd_service:remove_service(ServiceId),
+   ok.    

@@ -45,7 +45,7 @@ cases_test()->
 
       %% End application tests
   
-  %  cleanup(),
+    cleanup(),
     ok.
 
 
