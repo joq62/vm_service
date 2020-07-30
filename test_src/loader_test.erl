@@ -49,9 +49,10 @@ start()->
 
 
 initial_sd_service()->
-    ?assertEqual([{"config_service",vm_test@asus},
-		  {"log_service",vm_test@asus},
-		  {"sd_service",vm_test@asus}],sd_service:fetch_all(all)),
+    ?assertMatch([{_vm_service,vm_test@asus},
+		  {_config_service,vm_test@asus},
+		  {_log_service,vm_test@asus},
+		  {_sd_service,vm_test@asus}],sd_service:fetch_all(all)),
     
     ok.
 
