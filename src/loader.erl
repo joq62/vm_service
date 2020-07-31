@@ -20,8 +20,7 @@
 
 %% ====================================================================
 %% External functions
-%% ====================================================================
-
+%% ===================================================================
 %% Cases to handled
 %% 1. Not running, No files, not loaded, not registered => load and register
 %% 2. Running , file, loaded , registered => do nothing 

@@ -209,6 +209,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% Returns: non
 %% --------------------------------------------------------------------
 h_beat(HbInterval)->
+    [rpc:call(node(),loader,start,[ServiceId])||{ServiceId,_}<-sd_service:fetch_all(local_services)],
     ok=rpc:call(node(),sd_service,trade_services,[]),
     timer:sleep(HbInterval),
     rpc:cast(node(),?MODULE,heart_beat,[HbInterval]).
