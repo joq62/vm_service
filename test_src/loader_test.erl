@@ -45,6 +45,8 @@ start()->
     ?debugMsg("try to start non existing"),
     ?assertEqual(ok,start_non_existing()), 
 
+    ?debugMsg("test2"),
+    ?assertEqual(ok,test2()),     
     ok.
 
 
@@ -74,7 +76,7 @@ second_service()->
 
 try_start_first_again()->
     ServiceId="adder_service",
-    ?assertEqual({error,["adder_service"]},vm_service:start_service(ServiceId)),
+    ?assertEqual({error,[already_loaded,ServiceId]},vm_service:start_service(ServiceId)),
     ?assertEqual(42,adder_service:add(20,22)),
     ?assertEqual([vm_test@asus],sd_service:fetch_service(ServiceId)),
     ok.	 
@@ -93,4 +95,19 @@ stop_services()->
     
 start_non_existing()->
     ?assertMatch({badrpc,_},rpc:call(node(),vm_service,start_service,[glurk])),
+    ok.
+
+test2()->
+    ServiceId="adder_service",
+        Service=adder_service,
+    ?assertEqual(ok,one_service()),
+
+    ?assertEqual(ok,rpc:call(node(),application,stop,[Service])),
+    ?assertEqual({ok,"adder_service"},vm_service:start_service(ServiceId)),
+    ?assertMatch(42,rpc:call(node(),adder_service,add,[20,22])),
+
+    os:cmd("rm -rf "++ServiceId),
+    ?assertEqual({ok,"adder_service"},vm_service:start_service(ServiceId)),
+    ?assertMatch(42,rpc:call(node(),adder_service,add,[20,22])),
+
     ok.
