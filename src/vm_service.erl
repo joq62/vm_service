@@ -215,9 +215,9 @@ h_beat(HbInterval)->
 	{[],[],[]}->
 	    ok;
 	Info->
-	    io:format("Campaign result Missing ,Obsolite, FailedToStart ~p~n",[{?MODULE,?LINE,Info}])
+	    io:format("Campaign result Missing ,Obsolite, FailedToStart ~p~n",[{?MODULE,?LINE,Info}]),
+	      ok=rpc:call(node(),sd_service,trade_services,[])
     end,
-%    ok=rpc:call(node(),sd_service,trade_services,[]),
 
     rpc:cast(node(),?MODULE,heart_beat,[HbInterval]).
 
