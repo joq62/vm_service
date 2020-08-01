@@ -47,9 +47,12 @@ start()->
 
     ?debugMsg("test2"),
     ?assertEqual(ok,test2()),     
+
+    ?debugMsg("test3"),
+    ?assertEqual(ok,test3()),     
     ok.
 
-
+%%-----------------------------------------------------------------
 initial_sd_service()->
     ?assertMatch([{_vm_service,vm_test@asus},
 		  {_config_service,vm_test@asus},
@@ -99,9 +102,11 @@ start_non_existing()->
 
 test2()->
     ServiceId="adder_service",
-        Service=adder_service,
+    Service=adder_service,
+    ?assertEqual(false,loader:running(ServiceId)),
     ?assertEqual(ok,one_service()),
-
+    
+    ?assertEqual(true,loader:running(ServiceId)),
     ?assertEqual(ok,rpc:call(node(),application,stop,[Service])),
     ?assertEqual({ok,"adder_service"},vm_service:start_service(ServiceId)),
     ?assertMatch(42,rpc:call(node(),adder_service,add,[20,22])),
@@ -109,5 +114,18 @@ test2()->
     os:cmd("rm -rf "++ServiceId),
     ?assertEqual({ok,"adder_service"},vm_service:start_service(ServiceId)),
     ?assertMatch(42,rpc:call(node(),adder_service,add,[20,22])),
+
+    ?assertEqual(ok,vm_service:stop_service(ServiceId)),
+    ?assertEqual([],sd_service:fetch_service(ServiceId)),
+    ?assertMatch({badrpc,_},rpc:call(node(),adder_service,add,[20,22])),
+
+    ok.
+test3()->
+    ServiceId="adder_service",
+    ?assertEqual(false,loader:running(ServiceId)),
+    {Missing,Obsolite,FailedStarts}=orchistrate:simple_campaign(),
+     ?assertEqual({[{"adder_service",vm_test@asus}],[],[]},{Missing,Obsolite,FailedStarts}),
+    ?assertEqual(true,loader:running(ServiceId)),   
+    ?assertEqual(ok,vm_service:stop_service(ServiceId)),
 
     ok.

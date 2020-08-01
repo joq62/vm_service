@@ -13,7 +13,7 @@
 %% --------------------------------------------------------------------
 
 %% External exports
--export([start/1,stop/1
+-export([running/1,start/1,stop/1
 	]).
 	 
 
@@ -21,6 +21,23 @@
 %% ====================================================================
 %% External functions
 %% ===================================================================
+running(ServiceId)->
+    CurrentNode=node(),
+    Loaded=[ServiceId||{Application,_,_}<-application:loaded_applications(),
+		       list_to_atom(ServiceId)==Application],
+    Running=[ServiceId||{Application,_,_}<-application:which_applications(),
+			list_to_atom(ServiceId)==Application],
+    IsDir=filelib:is_dir(ServiceId),
+    Registered=[Node||Node<-sd_service:fetch_service(ServiceId),
+		      Node==CurrentNode],
+    Result=case {Running,Loaded,IsDir,Registered} of
+	       {[ServiceId],[ServiceId],true,[CurrentNode]}->
+		   true;
+	       _->
+		   false
+	   end,
+    Result.
+    
 %% Cases to handled
 %% 1. Not running, No files, not loaded, not registered => load and register
 %% 2. Running , file, loaded , registered => do nothing 

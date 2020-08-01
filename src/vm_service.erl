@@ -209,9 +209,16 @@ code_change(_OldVsn, State, _Extra) ->
 %% Returns: non
 %% --------------------------------------------------------------------
 h_beat(HbInterval)->
-    [rpc:call(node(),loader,start,[ServiceId])||{ServiceId,_}<-sd_service:fetch_all(local_services)],
-    ok=rpc:call(node(),sd_service,trade_services,[]),
+   % [rpc:call(node(),loader,start,[ServiceId])||{ServiceId,_}<-sd_service:fetch_all(local_services)],
     timer:sleep(HbInterval),
+    case rpc:call(node(),orchistrate,simple_campaign,[],15000) of
+	{[],[],[]}->
+	    ok;
+	Info->
+	    io:format("Campaign result Missing ,Obsolite, FailedToStart ~p~n",[{?MODULE,?LINE,Info}])
+    end,
+%    ok=rpc:call(node(),sd_service,trade_services,[]),
+
     rpc:cast(node(),?MODULE,heart_beat,[HbInterval]).
 
 
