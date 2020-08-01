@@ -28,7 +28,7 @@ running(ServiceId)->
     Running=[ServiceId||{Application,_,_}<-application:which_applications(),
 			list_to_atom(ServiceId)==Application],
     IsDir=filelib:is_dir(ServiceId),
-    Registered=[Node||Node<-sd_service:fetch_service(ServiceId),
+    Registered=[Node||Node<-rpc:call(node(),sd_service,fetch_service,[ServiceId]),
 		      Node==CurrentNode],
     Result=case {Running,Loaded,IsDir,Registered} of
 	       {[ServiceId],[ServiceId],true,[CurrentNode]}->
@@ -57,8 +57,8 @@ start(ServiceId)->
 		   Running=[ServiceId||{Application,_,_}<-application:which_applications(),
 				    list_to_atom(ServiceId)==Application],
 		   IsDir=filelib:is_dir(ServiceId),
-		   Registered=[Node||Node<-sd_service:fetch_service(ServiceId),
-				     Node==CurrentNode],
+		   Registered=[Node||Node<-rpc:call(node(),sd_service,fetch_service,[ServiceId]),
+		      Node==CurrentNode],
 		   
 		   case {Running,Loaded,IsDir,Registered} of
 		       {[ServiceId],[ServiceId],true,[CurrentNode]}->
@@ -74,7 +74,7 @@ start(ServiceId)->
 			   end,
 			   true=code:add_path(EbinDir),
 			   ok=application:start(list_to_atom(ServiceId)),
-			   sd_service:add_service(ServiceId),
+			   rpc:call(node(),sd_service,add_service,[ServiceId]),
 			   {ok,ServiceId}
 		   end;
 	       []->
@@ -90,5 +90,5 @@ stop(ServiceId)->
     application:unload(list_to_atom(ServiceId)),
     code:del_path(EbinDir),      
     os:cmd("rm -rf "++ServiceId),
-    sd_service:remove_service(ServiceId),
+    rpc:call(node(),sd_service,remove_service,[ServiceId]),
    ok.    

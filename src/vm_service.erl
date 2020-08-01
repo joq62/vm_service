@@ -142,7 +142,7 @@ handle_call({start_service,ServiceId}, _From, State) ->
     {reply, Reply, State};
 
 handle_call({stop_service,ServiceId}, _From, State) ->
-    Reply=loader:stop(ServiceId),
+    Reply=rpc:call(node(),loader,stop,[ServiceId]),
     {reply, Reply, State};
 
 handle_call({ping}, _From, State) ->
