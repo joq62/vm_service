@@ -68,10 +68,20 @@ start(ServiceId)->
 			   stop(ServiceId),
 			   case Type of
 			       git->
-				   os:cmd("git clone "++Source++ServiceId++".git");
+				   os:cmd("git clone "++Source++ServiceId++".git"),
+				   %% - Compile
+				   os:cmd("rm -rf include"),
+				   os:cmd("git clone "++Source++"include"++".git");
 			       dir->
-				   os:cmd("cp -r "++Source++"/"++ServiceId++" "++".")
+				   os:cmd("cp -r "++Source++"/"++ServiceId++" "++"."),
+				    %% - Compile
+				   os:cmd("rm -rf include"),
+				   os:cmd("cp -r "++Source++"/"++"include"++" "++".")
+				   
 			   end,
+			   %% -- Compile
+			   compile(ServiceId),
+			   %% -- end compile
 			   true=code:add_path(EbinDir),
 			   ok=application:start(list_to_atom(ServiceId)),
 			   rpc:call(node(),sd_service,add_service,[ServiceId]),
@@ -83,7 +93,6 @@ start(ServiceId)->
     Result.
 
 
-
 stop(ServiceId)->
     EbinDir=filename:join(ServiceId,"ebin"),
     application:stop(list_to_atom(ServiceId)),
@@ -92,3 +101,44 @@ stop(ServiceId)->
     os:cmd("rm -rf "++ServiceId),
     rpc:call(node(),sd_service,remove_service,[ServiceId]),
    ok.    
+
+
+compile(ServiceId)->
+    PathSrc=filename:join([ServiceId,"src"]),
+    PathEbin=filename:join([ServiceId,"ebin"]),
+    
+    %Get erl files that shall be compiled
+    Result=case rpc:call(node(),file,list_dir,[PathSrc]) of
+	       {ok,Files}->
+		   FilesToCompile=[filename:join(PathSrc,File)||File<-Files,filename:extension(File)==".erl"],
+		   % clean up ebin dir
+		   case rpc:call(node(),os,cmd,["rm -rf "++PathEbin++"/*"]) of
+		       []->
+			   CompileResult=[{rpc:call(node(),c,c,[ErlFile,[{outdir,PathEbin}]],5000),ErlFile}||ErlFile<-FilesToCompile],
+			   case [{R,File}||{R,File}<-CompileResult,error==R] of
+			       []->
+				   AppFileSrc=filename:join(PathSrc,ServiceId++".app"),
+				   AppFileDest=filename:join(PathEbin,ServiceId++".app"),
+				   case rpc:call(node(),os,cmd,["cp "++AppFileSrc++" "++AppFileDest]) of
+				       []->
+					 %  io:format("~p~n",[{AppFileSrc,AppFileDest,?FILE,?LINE}]),
+					   ok;
+				       {badrpc,Err} ->
+					   {error,[badrpc,node(),ServiceId,Err,?MODULE,?LINE]};
+				       Err ->
+					   {error,[undefined_error,node(),ServiceId,Err,?MODULE,?LINE]}
+				   end;
+			       CompilerErrors->
+				   {error,[compiler_error,CompilerErrors,?MODULE,?LINE]}
+			   end;
+		       {badrpc,Err} ->
+			   {error,[badrpc,node(),ServiceId,Err,?MODULE,?LINE]};
+		       Err ->
+			   {error,[undefined_error,node(),ServiceId,Err,?MODULE,?LINE]}
+		   end;
+	       {badrpc,Err} ->
+		   {error,[badrpc,node(),ServiceId,Err,?MODULE,?LINE]};
+	       Err ->
+		   {error,[undefined_error,node(),ServiceId,Err,?MODULE,?LINE]}
+	   end,
+    Result.
