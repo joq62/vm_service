@@ -212,7 +212,7 @@ h_beat(HbInterval)->
    % [rpc:call(node(),loader,start,[ServiceId])||{ServiceId,_}<-sd_service:fetch_all(local_services)],
     [net_kernel:connect_node(Node)||{_,Node}<-config_service:get_info(node_info)],    
     timer:sleep(HbInterval),
-    case rpc:call(node(),orchistrate,simple_campaign,[],30000) of
+    case rpc:call(node(),orchistrate,simple_campaign,[]) of
 	{[],[],[]}->
 	    ok;
 	Info->
