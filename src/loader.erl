@@ -114,7 +114,7 @@ compile(ServiceId)->
 		   % clean up ebin dir
 		   case rpc:call(node(),os,cmd,["rm -rf "++PathEbin++"/*"]) of
 		       []->
-			   CompileResult=[{rpc:call(node(),c,c,[ErlFile,[{outdir,PathEbin},{i,"include"}]],5000),ErlFile}||ErlFile<-FilesToCompile],
+			   CompileResult=[{rpc:call(node(),c,c,[ErlFile,[{outdir,PathEbin},{i,"include"}]]),ErlFile}||ErlFile<-FilesToCompile],
 			   case [{R,File}||{R,File}<-CompileResult,error==R] of
 			       []->
 				   AppFileSrc=filename:join(PathSrc,ServiceId++".app"),
